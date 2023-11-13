@@ -1,5 +1,6 @@
 import os
 import shutil
+import pathlib
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 # Create /sections/ and delete all section files
@@ -17,6 +18,7 @@ os.mkdir(dir_sections)
 class MonitoredFile:
     
     def __init__(self, filename : str) -> None:
+        self.dir : pathlib.Path = 
         self.filename : str = filename
         self.prev_mod_time = self.get_mod_time()
         self.pulse_file_changed : bool = False
@@ -52,5 +54,13 @@ class MasterFile(MonitoredFile):
         super().__init__(filename)
         self.sections : list[SectionFile] = []
 
+dir_this_file_parent = pathlib.Path(__file__).parent.resolve()
+dir_this_file = pathlib.Path(__file__).resolve()
+
+
+
+for filename in os.listdir(dir_this_file_parent):
+    file_resolved = pathlib.Path.joinpath(dir_this_file_parent, filename).resolve()
+    print(f"file: {filename}, resolved: {file_resolved}, __file__: {dir_this_file}, this: {file_resolved == dir_this_file}")
 
 
