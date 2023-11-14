@@ -1,6 +1,7 @@
 import os
 import shutil
 import pathlib
+import copy
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 # Create /sections/ and delete all section files
@@ -15,10 +16,56 @@ if os.path.exists(dir_sections):
 
 os.mkdir(dir_sections)
 
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+# Define the standard section header format
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+standard_header = "{comment declaration} Section: {section number},\n'{section description}'"
+
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+# Headers will be generated using search and replace
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+class Dummy:
+    def __init__(self, var) -> None:
+        self.var = var
+
+COMMENT_DECLARATION = "//"
+section_number = Dummy(var = 0)
+section_description = Dummy(var = "trunk")
+
+header_lookups = {
+    "{section number}" : section_number,
+    "{section description}" : section_description
+}
+
+def generate_section_header(number : int, description : str) -> str:
+    global section_number
+    global section_description
+    global header_lookups
+
+    section_number.var = number
+    section_description.var = description
+
+    new_header = copy.deepcopy(standard_header)
+
+    for replace_key in header_lookups.keys():
+        while replace_key in new_header:
+            new_header = new_header.replace(replace_key, str(header_lookups[replace_key].var))
+    
+    return new_header
+
+print(generate_section_header(number= 4, description= "test section"))
+exit()
+
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+# Parsing headers will 
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
 class MonitoredFile:
     
     def __init__(self, filename : str) -> None:
-        self.dir : pathlib.Path = 
+        self.dir : pathlib.Path = None
         self.filename : str = filename
         self.prev_mod_time = self.get_mod_time()
         self.pulse_file_changed : bool = False
@@ -57,10 +104,11 @@ class MasterFile(MonitoredFile):
 dir_this_file_parent = pathlib.Path(__file__).parent.resolve()
 dir_this_file = pathlib.Path(__file__).resolve()
 
-
-
 for filename in os.listdir(dir_this_file_parent):
     file_resolved = pathlib.Path.joinpath(dir_this_file_parent, filename).resolve()
-    print(f"file: {filename}, resolved: {file_resolved}, __file__: {dir_this_file}, this: {file_resolved == dir_this_file}")
+
+    # every file that isn't THIS python program is a potential managed file
+    if not file_resolved == dir_this_file:
 
 
+        pass
