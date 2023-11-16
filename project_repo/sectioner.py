@@ -14,11 +14,12 @@ from enum import Enum, auto as enum_auto
 dir_this_file_parent = pathlib.Path(__file__).parent.resolve()
 dir_sections = dir_this_file_parent.joinpath("sections")
 
-# Check whether the specified path exists or not
-if os.path.exists(dir_sections):
-   shutil.rmtree(dir_sections)
+def make_empty_sections_dir():
+    # Check whether the specified path exists or not
+    if os.path.exists(dir_sections):
+        shutil.rmtree(dir_sections)
 
-os.mkdir(dir_sections)
+    os.mkdir(dir_sections)
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 # Define the standard section header format
@@ -242,7 +243,7 @@ def parse_sections(master_file : MasterFile) -> list[SectionFile]:
                         try:
                             new_section_file = SectionFile(
                                 path= master_file.dir_master_sections.joinpath(
-                                    section_description + "." + master_file.filetype
+                                    str(section_number) + "__" + section_description + "." + master_file.filetype
                                 ),
                                 section_number= section_number,
                                 section_description= section_description,
@@ -253,6 +254,7 @@ def parse_sections(master_file : MasterFile) -> list[SectionFile]:
                             pass
                         else:
                             print("Section file success")
+                            new_section_file.lines = section_lines
                             return_files.append(new_section_file)
 
                     parsing_header = True
@@ -347,6 +349,8 @@ def parse_sections(master_file : MasterFile) -> list[SectionFile]:
                         if parsing_header and section_number > 0 and section_description != "":
                             parsing_valid_section = True
 
+                        index_char += len(line)
+
                         parsing_header = False
                         section_lines = ""
                         add_lines = ""
@@ -372,11 +376,13 @@ def parse_sections(master_file : MasterFile) -> list[SectionFile]:
                     index_char = len(line)
 
                     # Skip leading empty lines
-                    if section_lines:
+                    if section_lines or line:
+                        print("Adding to add_lines")
                         add_lines += line
 
                         # Skip empty lines at the end
                         if line:
+                            print("Pushing add_lines to section_lines")
                             section_lines += add_lines
                             add_lines = ""
                 
@@ -395,8 +401,8 @@ def parse_sections(master_file : MasterFile) -> list[SectionFile]:
             try:
                 new_section_file = SectionFile(
                     path= master_file.dir_master_sections.joinpath(
-                        section_description + "." + master_file.filetype
-                        ),
+                        str(section_number) + "__" + section_description + "." + master_file.filetype
+                    ),
                     section_number= section_number,
                     section_description= section_description,
                     master_file= master_file
@@ -406,6 +412,7 @@ def parse_sections(master_file : MasterFile) -> list[SectionFile]:
                 pass
             else:
                 print("Section file success")
+                new_section_file.lines = section_lines
                 return_files.append(new_section_file)
     
     return return_files
@@ -437,7 +444,15 @@ def detect_all_section_files(master_files : list[MasterFile]) -> list[SectionFil
 
 if __name__ == "__main__":
 
+    make_empty_sections_dir()
+
     mfile = MasterFile(path= dir_this_file_parent.joinpath("test.txt"))
+
+    os.mkdir(dir_sections.joinpath(mfile.filename))
 
     for section in parse_sections(master_file= mfile):
         print(section)
+        for line in section.lines:
+            print(line, end="")
+        with open(section.path, "w") as f:
+            f.write(section.lines)
