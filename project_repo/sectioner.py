@@ -6,24 +6,33 @@ import pathlib
 import copy
 from enum import Enum, auto as enum_auto
 
-# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-# Delete /sections/ and delete all section files
-# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~+
+# section_number     : 1
+# section_description: SectionDirs
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~-
 
 # Directory path containing the text files
 dir_this_file_parent = pathlib.Path(__file__).parent.resolve()
 dir_sections = dir_this_file_parent.joinpath("sections")
 
-def make_empty_sections_dir():
+
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~+
+# section_number     : 2
+# section_description: make_empty_dir
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~-
+
+def make_empty_dir(dir):
     # Check whether the specified path exists or not
-    if os.path.exists(dir_sections):
-        shutil.rmtree(dir_sections)
+    if os.path.exists(dir):
+        shutil.rmtree(dir)
 
-    os.mkdir(dir_sections)
+    os.mkdir(dir)
 
-# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-# Define the standard section header format
-# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~+
+# section_number     : 3
+# section_description: HeaderDefinition
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~-
 
 class HeaderElement(Enum):
     HEADER_START = enum_auto()
@@ -35,10 +44,10 @@ class HeaderElement(Enum):
     SECTION_DESCRIPTION_DESIGNATOR = enum_auto()
 
 header_key_words = {
-    HeaderElement.COMMENT_DECLARATION : "//",
-    HeaderElement.SECTION_NUMBER_DESIGNATOR : "_section_number_      ",
+    HeaderElement.COMMENT_DECLARATION : "#",
+    HeaderElement.SECTION_NUMBER_DESIGNATOR : "section_number     :",
     HeaderElement.SECTION_NUMBER : "_value_{section number}",
-    HeaderElement.SECTION_DESCRIPTION_DESIGNATOR : "_section_description_ ",
+    HeaderElement.SECTION_DESCRIPTION_DESIGNATOR : "section_description:",
     HeaderElement.SECTION_DESCRIPTION : "_value_{section description}"
 }
 
@@ -66,9 +75,10 @@ standard_header_sequence = (
 
 standard_header = ''.join(element for element in standard_header_sequence)
 
-# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-# Evaluate sequence for errors
-# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~+
+# section_number     : 4
+# section_description: HeaderDefinitionErrors
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~-
 
 if standard_header_sequence[0] != header_key_words[HeaderElement.HEADER_START]:
     print("No, no. The first characters of the standard header sequence must be the HEADER_START keyword")
@@ -87,10 +97,11 @@ if standard_header_sequence[-2] != "\n":
     print("Press enter to exit")
     _ = input()
     exit()
-
-# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-# Headers will be generated using search and replace
-# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+ 
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~+
+# section_number     : 5
+# section_description: generate_section_header
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~-
 
 def generate_section_header(number : int, description : str) -> str:
 
@@ -117,9 +128,10 @@ def generate_section_header(number : int, description : str) -> str:
 # print(generate_section_header(number= 36, description= "Down frost exposure"))
 # exit()
 
-# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-# A monitored file has methods for detecting a file change
-# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~+
+# section_number     : 6
+# section_description: file_classes
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~-
 
 class MonitoredFile:
 
@@ -129,13 +141,16 @@ class MonitoredFile:
         self.filetype = self.path.name.split(".")[-1]
         self.prev_mod_time = self.get_mod_time()
         self.pulse_file_changed : bool = False
+        
 
         # Attempt to read all lines on init to validate this is possible for this file.
         try:
             with open(self.path, "r") as f:
                 self.lines = f.readlines()
         except:
-            print("Couldn't read lines")
+            self.lines_readable = False
+        else:
+            self.lines_readable = True
 
         # Save the RAM, we don't need the lines right now.
         self.lines = ""
@@ -144,7 +159,6 @@ class MonitoredFile:
         try:
             return os.stat(self.path).st_mtime
         except:
-            print(f"Couldn't get modified time. Was the file {self.path} deleted??")
             return None
 
     def detect_file_change(self) -> bool:
@@ -165,31 +179,47 @@ class SectionFile(MonitoredFile):
         self.section_number = section_number
         self.section_description = section_description
         self.master_file = master_file
-    
+
     def __str__(self) -> str:
         return f"Section File {self.section_number}, '{self.section_description}'"
 
 class MasterFile(MonitoredFile):
     """MonitoredFile with sections delimited by headers"""
-
     def __init__(self, path : pathlib.Path) -> None:
+
         super().__init__(path)
-        self.dir_master_sections = dir_sections.joinpath(self.filename)
+        self.dir_master_sections = dir_sections.joinpath(self.filename + "." + self.filetype)
         self.sections : list[SectionFile] = []
 
-def detect_all_master_files() -> list[MasterFile]:
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~+
+# section_number     : 6
+# section_description: detect_files
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~-
+
+def detect_all_master_files(dir) -> list[MasterFile]:
 
     return_files : list[MasterFile] = []
 
-    for path in os.listdir():
-        try:
-            new_master_file = MasterFile(path= dir_this_file_parent.joinpath(path))
-        except:
-            pass
-        else:
+    for path in os.listdir(dir):
+        new_master_file = MasterFile(path= dir_this_file_parent.joinpath(path))
+        if new_master_file.lines_readable:
             return_files.append(new_master_file)
 
     return return_files
+
+def detect_section_files(master_file : MasterFile) -> list[SectionFile]:
+
+    with open(master_file.path, "r") as f:
+        for line_number, line in enumerate(f):
+
+            # Start parsing header
+            if line == standard_header_sequence[0]:
+                pass
+
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~+
+# section_number     : 7
+# section_description: parse_sections
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~-
 
 def parse_sections(master_file : MasterFile) -> list[SectionFile]:
 
@@ -340,7 +370,7 @@ def parse_sections(master_file : MasterFile) -> list[SectionFile]:
 
                                 # If parsing was successful, increment the character index
                                 index_char += len(section_description)
-                    
+
                     # Complete header parsing and evaluate if header valid
                     elif line.strip()  == header_key_words[HeaderElement.HEADER_END]:
 
@@ -362,8 +392,8 @@ def parse_sections(master_file : MasterFile) -> list[SectionFile]:
 
                         index_char += len(seq_str)
                         head_sq_index += 1
-                    
-                    # If this section of header isn't in the header sequence, 
+
+                    # If this section of header isn't in the header sequence,
                     # then it's an improperly formatted header.
                     else:
                         print(fr"Bad Header, seq_str: {seq_str}, substring: {line[index_char:]}")
@@ -376,16 +406,16 @@ def parse_sections(master_file : MasterFile) -> list[SectionFile]:
                     index_char = len(line)
 
                     # Skip leading empty lines
-                    if section_lines or line:
+                    if section_lines or line.strip():
                         print("Adding to add_lines")
                         add_lines += line
 
                         # Skip empty lines at the end
-                        if line:
+                        if line.strip():
                             print("Pushing add_lines to section_lines")
                             section_lines += add_lines
                             add_lines = ""
-                
+
                 # If not parsing a header or valid section, just continue
                 else:
                     print("This line is meaningless")
@@ -414,45 +444,45 @@ def parse_sections(master_file : MasterFile) -> list[SectionFile]:
                 print("Section file success")
                 new_section_file.lines = section_lines
                 return_files.append(new_section_file)
-    
+
     return return_files
 
-
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~+
+# section_number     : 8
+# section_description: generate_section_files
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~-
 
 def generate_section_files(master_file : MasterFile) -> None:
-    pass
+
+    for section in master_file.sections:
+            # print(section)
+            # for line in section.lines:
+            #     print(line, end="")
+            with open(section.path, "w") as f:
+                if section.lines:
+                    if section.lines[-1] == "\n":
+                        f.write(section.lines[:-1])
+                    else:
+                        f.write(section.lines)
+                else:
+                    f.write("")
 
 
-def update_master_files(master_files : list[MasterFile]) -> list[MasterFile]:
-    current_master_files = detect_all_master_files()
-
-
-def detect_all_section_files(master_files : list[MasterFile]) -> list[SectionFile]:
-    """Section files are appended to master file attribute
-
-    Writes to """
-
-    for m in master_files:
-
-        with open(m.path, "r") as f:
-            for line_number, line in enumerate(f):
-
-                # Start parsing header
-                if line == standard_header_sequence[0]:
-                    pass
-
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~+
+# section_number     : 9
+# section_description: main
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~-
 
 if __name__ == "__main__":
 
-    make_empty_sections_dir()
+    make_empty_dir(dir= dir_sections)
 
-    mfile = MasterFile(path= dir_this_file_parent.joinpath("test.txt"))
+    mfiles = detect_all_master_files(dir= dir_this_file_parent)
 
-    os.mkdir(dir_sections.joinpath(mfile.filename))
+    for mfile in mfiles:
 
-    for section in parse_sections(master_file= mfile):
-        print(section)
-        for line in section.lines:
-            print(line, end="")
-        with open(section.path, "w") as f:
-            f.write(section.lines)
+        mfile.sections = parse_sections(master_file= mfile)
+
+        make_empty_dir(dir_sections.joinpath(mfile.dir_master_sections))
+
+        generate_section_files(master_file= mfile)
