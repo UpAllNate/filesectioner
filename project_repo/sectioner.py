@@ -171,6 +171,12 @@ class MonitoredFile:
 
         return self.pulse_file_changed
 
+    def __eq__(self, __value: object) -> bool:
+        return self.path == __value.path
+    
+    def __hash__(self) -> int:
+        return hash(tuple(self.path, self.filename, self.filetype))
+
 class SectionFile(MonitoredFile):
     """MonitoredFile that is one named and numbered part of a MasterFile"""
 
@@ -192,7 +198,7 @@ class MasterFile(MonitoredFile):
         self.sections : list[SectionFile] = []
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~+
-# section_number     : 6
+# section_number     : 7
 # section_description: detect_files
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~-
 
@@ -207,17 +213,8 @@ def detect_all_master_files(dir) -> list[MasterFile]:
 
     return return_files
 
-def detect_section_files(master_file : MasterFile) -> list[SectionFile]:
-
-    with open(master_file.path, "r") as f:
-        for line_number, line in enumerate(f):
-
-            # Start parsing header
-            if line == standard_header_sequence[0]:
-                pass
-
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~+
-# section_number     : 7
+# section_number     : 8
 # section_description: parse_sections
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~-
 
@@ -485,7 +482,7 @@ def parse_sections(master_file : MasterFile, renumber_sections = False) -> list[
     return return_files
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~+
-# section_number     : 8
+# section_number     : 9
 # section_description: generate_section_files
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~-
 
@@ -506,20 +503,51 @@ def generate_section_files(master_file : MasterFile) -> None:
 
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~+
-# section_number     : 9
+# section_number     : 10
 # section_description: build_sections
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~-
 
-def build_sections(master_file : MasterFile) -> None:
+def build_sections(master_file : MasterFile) -> MasterFile:
+
+    print("build")
 
     master_file.sections = parse_sections(master_file= master_file, renumber_sections= True)
     make_empty_dir(dir_sections.joinpath(master_file.dir_master_sections))
     generate_section_files(master_file= master_file)
 
+    return master_file
 
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~+
-# section_number     : 9
+# section_number     : 11
+# section_description: detect_all_section_files
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~-
+
+def detect_all_section_files(master_file : MasterFile) -> list[SectionFile]:
+
+    return_files : list[SectionFile] = []
+
+    for file in os.listdir(master_file.dir_master_sections):
+
+        try:
+            new_section_file = SectionFile(
+                path= master_file.dir_master_sections.joinpath(file),
+                section_number= int(file.split("__")[0]),
+                section_description= file[file.index("__"):].split(".")[0],
+                master_file= master_file
+            )
+        
+        except:
+            continue
+        
+        if new_section_file.lines_readable:
+            return_files.append(new_section_file)
+
+    return return_files
+
+
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~+
+# section_number     : 12
 # section_description: main
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~-
 
@@ -529,23 +557,66 @@ if __name__ == "__main__":
 
     make_empty_dir(dir= dir_sections)
 
-    mfiles = detect_all_master_files(dir= dir_this_file_parent)
-
-    for mfile in mfiles:
-        build_sections(master_file= mfile)
+    mfiles : list[MasterFile] = []
     
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~+
-# section_number     : 10
+# section_number     : 13
 # section_description: mainLoop
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~-
 
     try:
         while True:
-            for mfile in mfiles:
 
-                if mfile.detect_file_change():
-                    build_sections(master_file= mfile)
+            # Add new master files
+            potential_masters = detect_all_master_files(dir= dir_this_file_parent)
+
+            for pm in potential_masters:
+                if pm not in mfiles:
+                    mfiles.append(pm)
+
+            # Evaluate all master files
+            pop_indexes = []
+
+            # Detect changes to a master file.
+            # Remove sections if the master file is 
+            # deleted
+            for index, mfile in enumerate(mfiles):
+
+                if mfile.dir_master_sections.is_dir():
+
+                    # Make sure all section files that are present
+                    # match all section files within the scope of master file
+                    section_file_mismatch = False
+                    potential_sections = detect_all_section_files(master_file= mfile)
+
+                    for file in potential_sections:
+                        if file not in mfile.sections:
+                            section_file_mismatch = True 
+                    
+                    for file in mfile.sections:
+                        if file not in potential_sections:
+                            section_file_mismatch = True
+                
+                else:
+                    make_empty_dir(dir= mfile.dir_master_sections)
+
+                if mfile.path.is_file() \
+                    and (
+                        mfile.detect_file_change() 
+                        or not mfile.sections
+                        or section_file_mismatch
+                    ):
+                        mfiles[index] = build_sections(master_file= mfile)
+                else:
+                    make_empty_dir(dir= mfile.dir_master_sections)
+                    os.rmdir(path= mfile.dir_master_sections)
+                    pop_indexes.append(index)
             
+            for index in sorted(pop_indexes, reverse= True):
+                mfiles.pop(index)
+            
+
+                        
             time.sleep(.1)
             
     except KeyboardInterrupt:
