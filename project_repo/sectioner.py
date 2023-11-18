@@ -97,7 +97,7 @@ if standard_header_sequence[-2] != "\n":
     # print("Press enter to exit")
     _ = input()
     exit()
- 
+
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~+
 # section_number     : 5
 # section_description: generate_section_header
@@ -141,7 +141,7 @@ class MonitoredFile:
         self.filetype = self.path.name.split(".")[-1]
         self.prev_mod_time = self.get_mod_time()
         self.pulse_file_changed : bool = False
-        
+
 
         # Attempt to read all lines on init to validate this is possible for this file.
         try:
@@ -173,7 +173,7 @@ class MonitoredFile:
 
     def __eq__(self, __value: object) -> bool:
         return self.path == __value.path
-    
+
     def __hash__(self) -> int:
         return hash(tuple(self.path, self.filename, self.filetype))
 
@@ -448,7 +448,7 @@ def parse_sections(master_file : MasterFile, renumber_sections = False) -> list[
                     # print("This line is meaningless")
 
                     index_char = len(line)
-            
+
             if renumber_sections:
                 master_file_lines.append(line)
 
@@ -474,7 +474,7 @@ def parse_sections(master_file : MasterFile, renumber_sections = False) -> list[
                 # print("Section file success")
                 new_section_file.lines = section_lines
                 return_files.append(new_section_file)
-    
+
     if renumber_sections:
         with open(master_file.path, "w") as f:
             f.writelines(master_file_lines)
@@ -536,10 +536,10 @@ def detect_all_section_files(master_file : MasterFile) -> list[SectionFile]:
                 section_description= file[file.index("__"):].split(".")[0],
                 master_file= master_file
             )
-        
+
         except:
             continue
-        
+
         if new_section_file.lines_readable:
             return_files.append(new_section_file)
 
@@ -558,7 +558,7 @@ if __name__ == "__main__":
     make_empty_dir(dir= dir_sections)
 
     mfiles : list[MasterFile] = []
-    
+
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~+
 # section_number     : 13
 # section_description: mainLoop
@@ -578,7 +578,7 @@ if __name__ == "__main__":
             pop_indexes = []
 
             # Detect changes to a master file.
-            # Remove sections if the master file is 
+            # Remove sections if the master file is
             # deleted
             for index, mfile in enumerate(mfiles):
 
@@ -591,18 +591,18 @@ if __name__ == "__main__":
 
                     for file in potential_sections:
                         if file not in mfile.sections:
-                            section_file_mismatch = True 
-                    
+                            section_file_mismatch = True
+
                     for file in mfile.sections:
                         if file not in potential_sections:
                             section_file_mismatch = True
-                
+
                 else:
                     make_empty_dir(dir= mfile.dir_master_sections)
 
                 if mfile.path.is_file() \
                     and (
-                        mfile.detect_file_change() 
+                        mfile.detect_file_change()
                         or not mfile.sections
                         or section_file_mismatch
                     ):
@@ -611,13 +611,13 @@ if __name__ == "__main__":
                     make_empty_dir(dir= mfile.dir_master_sections)
                     os.rmdir(path= mfile.dir_master_sections)
                     pop_indexes.append(index)
-            
+
             for index in sorted(pop_indexes, reverse= True):
                 mfiles.pop(index)
-            
 
-                        
+
+
             time.sleep(.1)
-            
+
     except KeyboardInterrupt:
         exit()
