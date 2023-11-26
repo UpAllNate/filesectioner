@@ -4,6 +4,7 @@ import pathlib
 import os
 
 from header import SectionHeader
+# from icecream import ic
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~+
 # section_number     : 6
@@ -102,6 +103,8 @@ class MasterFile(MonitoredFile):
             for line in f:
                 line : str
 
+                # ic(len(line), line.strip())
+
                 # The line is parsed by investigating whether
                 # the sequence string matches the current
                 # character index
@@ -123,33 +126,44 @@ class MasterFile(MonitoredFile):
                     ]
 
                     header_sequence_match = test_string == current_header_sequence_string
+                    # ic(
+                    #     current_header_sequence_string,
+                    #     len(current_header_sequence_string),
+                    #     test_string,
+                    #     index_char,
+                    #     head_sq_index
+                    # )
 
                     pulse_last_head_sq_index = last_head_sq_index == head_sq_index
                     header_parse_success = False
 
                     # Header text match
                     if header_sequence_match:
+                        # ic("sequence match")
                         index_char += len(self.section_header.key_sequence[head_sq_index])
                         header_parse_success = True
 
                     # Header sequence number
                     if current_header_sequence_string == self.section_header.key_number:
+                        # ic("key_number")
 
                         parse_key = False
 
                         # Get the section number as string
                         if pulse_last_head_sq_index:
+                            # ic("last head sq key in number")
                             section_number_str = line[index_char:].strip()
                             parse_key = True
 
                         else:
                             next_test_string = self.section_header.key_sequence[head_sq_index + 1]
+                            # ic(next_test_string, line[index_char:])
                             try:
-                                next_test_string_index = line.index(next_test_string)
+                                next_test_string_index = line[index_char:].index(next_test_string)
                             except:
                                 pass
                             else:
-                                section_number_str = line[index_char : next_test_string_index].strip()
+                                section_number_str = line[index_char:][:next_test_string_index].strip()
                                 parse_key = True
 
                         if parse_key:
@@ -163,6 +177,7 @@ class MasterFile(MonitoredFile):
 
                     # Header sequence description
                     if current_header_sequence_string == self.section_header.key_description:
+                        # ic("key_description")
 
                         # Get the section number as string
                         if pulse_last_head_sq_index:
@@ -172,14 +187,15 @@ class MasterFile(MonitoredFile):
                         else:
                             next_test_string = self.section_header.key_sequence[head_sq_index + 1]
                             try:
-                                next_test_string_index = line.index(next_test_string)
+                                next_test_string_index = line[index_char:].index(next_test_string)
                             except:
                                 pass
                             else:
-                                section_description = line[index_char : next_test_string_index].strip()
+                                section_description = line[index_char:][:next_test_string_index].strip()
                                 header_parse_success = True
                                 index_char += len(section_description)
 
+                    # ic(header_parse_success)
                     # Increment header sequence index
                     # or reset if header parsing failure
                     if header_parse_success:
@@ -242,11 +258,20 @@ if __name__ == "__main__":
 
     section_header = SectionHeader(
         key_sequence= [
+            "numnumnum",
+            " ",
+            "numnumnum",
+            " ",
+            "numnumnum",
+            " ",
+            "numnumnum",
+            " ",
             "spank ",
             "numnumnum",
             "\n",
             " dobonk: ",
             "descdescdesc",
+            "\n",
             "] browntown"
         ],
         key_number= "numnumnum",

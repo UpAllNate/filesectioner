@@ -7,19 +7,49 @@ import pathlib
 from header import SectionHeader
 from file_class import MasterFile, SectionFile
 
-# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~+
-# section_number     : 1
-# section_description: SectionDirs
-# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~-
+python_header = SectionHeader(
+    key_sequence= [
+        "# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\n",
+        "# section number     : ",
+        "___number___",
+        "\n",
+        "# section description: ",
+        "___description___",
+        "\n",
+        "# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~"
+    ],
+    key_number="___number___",
+    key_description="___description___"
+)
 
-# Directory path containing the text files
+st_header = SectionHeader(
+    key_sequence= [
+        "// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\n",
+        "// section number     : ",
+        "___number___",
+        "\n",
+        "// section description: ",
+        "___description___",
+        "\n",
+        "// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~"
+    ],
+    key_number="___number___",
+    key_description="___description___"
+)
+
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+# section number     : 1
+# section description: SectionDirs
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
 dir_this_file_parent = pathlib.Path(__file__).parent.resolve()
 dir_sections = dir_this_file_parent.joinpath("sections")
 
-# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~+
-# section_number     : 2
-# section_description: make_empty_dir
-# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~-
+
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+# section number     : 2
+# section description: make_empty_dir
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 def make_empty_dir(dir):
     # Check whether the specified path exists or not
@@ -29,26 +59,29 @@ def make_empty_dir(dir):
     os.mkdir(dir)
 
 
-# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~+
-# section_number     : 7
-# section_description: detect_files
-# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~-
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+# section number     : 7
+# section description: detect_files
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-def detect_all_master_files(dir) -> list[MasterFile]:
+def detect_all_master_files(dir : pathlib.Path, section_header : SectionHeader) -> list[MasterFile]:
 
     return_files : list[MasterFile] = []
 
     for path in os.listdir(dir):
         new_master_file = MasterFile(path= dir_this_file_parent.joinpath(path))
         if new_master_file.lines_readable:
-            return_files.append(new_master_file)
+            new_master_file.section_header = section_header
+            new_master_file.parse()
+            if new_master_file.sections:
+                return_files.append(new_master_file)
 
     return return_files
 
-# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~+
-# section_number     : 9
-# section_description: generate_section_files
-# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~-
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+# section number     : 9
+# section description: generate_section_files
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 def generate_section_files(master_file : MasterFile) -> None:
 
@@ -66,10 +99,10 @@ def generate_section_files(master_file : MasterFile) -> None:
                     f.write("")
 
 
-# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~+
-# section_number     : 10
-# section_description: build_sections
-# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~-
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+# section number     : 10
+# section description: build_sections
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 def build_sections(master_file : MasterFile) -> MasterFile:
 
@@ -82,10 +115,10 @@ def build_sections(master_file : MasterFile) -> MasterFile:
     return master_file
 
 
-# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~+
-# section_number     : 11
-# section_description: detect_all_section_files
-# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~-
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+# section number     : 11
+# section description: detect_all_section_files
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 def detect_all_section_files(master_file : MasterFile) -> list[SectionFile]:
 
@@ -96,8 +129,8 @@ def detect_all_section_files(master_file : MasterFile) -> list[SectionFile]:
         try:
             new_section_file = SectionFile(
                 path= master_file.dir_master_sections.joinpath(file),
-                section_number= int(file.split("__")[0]),
-                section_description= file[file.index("__"):].split(".")[0],
+                section number= int(file.split("__")[0]),
+                section description= file[file.index("__"):].split(".")[0],
                 master_file= master_file
             )
 
@@ -110,10 +143,10 @@ def detect_all_section_files(master_file : MasterFile) -> list[SectionFile]:
     return return_files
 
 
-# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~+
-# section_number     : 12
-# section_description: main
-# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~-
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+# section number     : 12
+# section description: main
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 if __name__ == "__main__":
 
@@ -123,10 +156,10 @@ if __name__ == "__main__":
 
     mfiles : list[MasterFile] = []
 
-# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~+
-# section_number     : 13
-# section_description: mainLoop
-# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~-
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+# section number     : 13
+# section description: mainLoop
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
     try:
         while True:
