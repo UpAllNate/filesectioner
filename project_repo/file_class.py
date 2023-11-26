@@ -228,6 +228,14 @@ class MasterFile(MonitoredFile):
                     section_lines = []
 
         if parsing_valid_section:
+
+            # If the whole file is completed and was
+            # parsing a section, add those header
+            # lines to that section
+            if header_lines:
+                section_lines.extend(header_lines)
+                new_section_file.lines.extend(header_lines)
+
             self.sections.append(new_section_file)
 
 if __name__ == "__main__":
