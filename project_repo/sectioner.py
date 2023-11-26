@@ -2,11 +2,22 @@ from __future__ import annotations
 
 import os
 import shutil
-import pathlib
+from pathlib import Path
 
 from header import SectionHeader
 from file_class import MasterFile, SectionFile
 
+import argparse
+
+dir_working = Path(os.getcwd()).resolve()
+
+parser = argparse.ArgumentParser(description='Maintain section files.')
+parser.add_argument('dirs', metavar='d', type=str, nargs='*', default= ["."],
+                    help='directories or files to manage')
+
+args = parser.parse_args()
+
+# Define section header objects
 python_header = SectionHeader(
     key_sequence= [
         "# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\n",
@@ -37,14 +48,54 @@ st_header = SectionHeader(
     key_description="___description___"
 )
 
-# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-# section number     : 1
-# section description: SectionDirs
-# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+all_section_headers = [
+    python_header,
+    st_header
+]
 
-dir_this_file_parent = pathlib.Path(__file__).parent.resolve()
-dir_sections = dir_this_file_parent.joinpath("sections")
+def get_master_files(directories : list[str], headers : list[SectionHeader]) -> list[MasterFile]:
 
+    input_dirs = directories
+
+    # Evaluate directories and convert to Path class objects
+    pops = []
+    for i, dir in enumerate(input_dirs):
+
+        if dir == ".":
+            pops.append(i)
+            for d in os.listdir(dir_working):
+                if Path(dir).joinpath(d).is_file():
+                    input_dirs.append(Path(dir).joinpath(d).resolve()) 
+
+        elif Path(dir).is_dir():
+            pops.append(i)
+            for d in os.listdir(dir):
+                if Path(dir).joinpath(d).is_file():
+                    input_dirs.append(Path(dir).joinpath(d).resolve())    
+        
+        elif Path(dir).is_file():
+            input_dirs[i] = Path(dir).resolve()
+        
+        else:
+            pops.append(i)
+
+    for i in sorted(pops, reverse=True):
+        input_dirs.pop(i)
+
+    master_files : list[MasterFile] = []
+    for file in input_dirs:
+        new_master_file = MasterFile(file)
+        added = False
+        if new_master_file.lines_readable:
+            for header in headers:
+                if not added:
+                    new_master_file.section_header = header
+                    new_master_file.parse()
+                    if new_master_file.sections:
+                        added = True
+                        master_files.append(new_master_file)
+    
+    return master_files
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 # section number     : 2
@@ -64,12 +115,12 @@ def make_empty_dir(dir):
 # section description: detect_files
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-def detect_all_master_files(dir : pathlib.Path, section_header : SectionHeader) -> list[MasterFile]:
+def detect_all_master_files(dir : Path, section_header : SectionHeader) -> list[MasterFile]:
 
     return_files : list[MasterFile] = []
 
     for path in os.listdir(dir):
-        new_master_file = MasterFile(path= dir_this_file_parent.joinpath(path))
+        new_master_file = MasterFile(path= path)
         if new_master_file.lines_readable:
             new_master_file.section_header = section_header
             new_master_file.parse()
@@ -86,18 +137,17 @@ def detect_all_master_files(dir : pathlib.Path, section_header : SectionHeader) 
 def generate_section_files(master_file : MasterFile) -> None:
 
     for section in master_file.sections:
-            # # print(section)
-            # for line in section.lines:
-            #     # print(line, end="")
-            with open(section.path, "w") as f:
-                if section.lines:
-                    if section.lines[-1] == "\n":
-                        f.write(section.lines[:-1])
-                    else:
-                        f.write(section.lines)
-                else:
-                    f.write("")
 
+        with open(section.path, "w") as f:
+            if section.lines:
+                for line_number, line in enumerate(section.lines):
+                    if line_number < len(section.lines) - 1:
+                        f.write(line + "\n")
+                    else:
+                        f.write(line)
+            else:
+                f.write("")
+            
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 # section number     : 10
@@ -124,13 +174,13 @@ def detect_all_section_files(master_file : MasterFile) -> list[SectionFile]:
 
     return_files : list[SectionFile] = []
 
-    for file in os.listdir(master_file.dir_master_sections):
+    for path in os.listdir(master_file.dir_master_sections):
 
         try:
             new_section_file = SectionFile(
-                path= master_file.dir_master_sections.joinpath(file),
-                section number= int(file.split("__")[0]),
-                section description= file[file.index("__"):].split(".")[0],
+                path= master_file.dir_master_sections.joinpath(path),
+                section_number= int(path.split("__")[0]),
+                section_description= path[path.index("__"):].split(".")[0],
                 master_file= master_file
             )
 
@@ -164,12 +214,17 @@ if __name__ == "__main__":
     try:
         while True:
 
-            # Add new master files
-            potential_masters = detect_all_master_files(dir= dir_this_file_parent)
+            for header_object in all_section_headers:
 
-            for pm in potential_masters:
-                if pm not in mfiles:
-                    mfiles.append(pm)
+                # Add new master files
+                potential_masters = detect_all_master_files(
+                    dir= dir_this_file_parent,
+                    section_header= python_header
+                )
+
+                for pm in potential_masters:
+                    if pm not in mfiles:
+                        mfiles.append(pm)
 
             # Evaluate all master files
             pop_indexes = []
@@ -211,8 +266,6 @@ if __name__ == "__main__":
 
             for index in sorted(pop_indexes, reverse= True):
                 mfiles.pop(index)
-
-
 
             time.sleep(.1)
 
