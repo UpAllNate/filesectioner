@@ -4,6 +4,9 @@ import os
 import shutil
 import pathlib
 
+from header import SectionHeader
+from file_class import MasterFile, SectionFile
+
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~+
 # section_number     : 1
 # section_description: SectionDirs
@@ -12,7 +15,6 @@ import pathlib
 # Directory path containing the text files
 dir_this_file_parent = pathlib.Path(__file__).parent.resolve()
 dir_sections = dir_this_file_parent.joinpath("sections")
-
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~+
 # section_number     : 2
@@ -44,14 +46,6 @@ def detect_all_master_files(dir) -> list[MasterFile]:
     return return_files
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~+
-# section_number     : 8
-# section_description: parse_sections
-# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~-
-
-def parse_sections(master_file : MasterFile, renumber_sections = False) -> list[SectionFile]:
-
-    
-# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~+
 # section_number     : 9
 # section_description: generate_section_files
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~-
@@ -81,7 +75,7 @@ def build_sections(master_file : MasterFile) -> MasterFile:
 
     print("build")
 
-    master_file.sections = parse_sections(master_file= master_file, renumber_sections= True)
+    master_file.parse()
     make_empty_dir(dir_sections.joinpath(master_file.dir_master_sections))
     generate_section_files(master_file= master_file)
 
