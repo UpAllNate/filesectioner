@@ -22,14 +22,14 @@ class MonitoredFile:
         # Attempt to read all lines on init to validate this is possible for this file.
         try:
             with open(self.path, "r") as f:
-                self.lines = f.readlines()
+                self.lines : list[str] = f.readlines()
         except:
             self.lines_readable = False
         else:
             self.lines_readable = True
 
         # Save the RAM, we don't need the lines right now.
-        self.lines = ""
+        self.lines : list[str] = []
 
     def get_mod_time(self) -> float:
         try:
@@ -67,7 +67,7 @@ class SectionFile(MonitoredFile):
         super().__init__(path)
         self.section_number = section_number
         self.section_description = section_description
-        self.lines = ""
+        self.lines : list[str] = []
         self.master_file = master_file
 
 class MasterFile(MonitoredFile):
@@ -91,7 +91,8 @@ class MasterFile(MonitoredFile):
         parsing_header = False
         parsing_valid_section = False
         self.sections : list[SectionFile] = []
-        header_str = ""
+        header_lines : list[str] = []
+        section_lines : list[str] = [] # Used to only extend section lines with non empty lines
 
         section_number = None
         section_description = None
@@ -129,10 +130,6 @@ class MasterFile(MonitoredFile):
                     # Header text match
                     if header_sequence_match:
                         index_char += len(self.section_header.key_sequence[head_sq_index])
-                        if head_sq_index == 0:
-                            header_str = test_string
-                            parsing_header = True
-                        
                         header_parse_success = True
 
                     # Header sequence number
@@ -162,21 +159,7 @@ class MasterFile(MonitoredFile):
                                 pass
                             else:
                                 header_parse_success = True
-                                
-                        if header_parse_success:
-                            # Either already true or the case
-                            # of first sequence index being section number
-                            if not parsing_header:
-                                header_str = section_number_str
-                            else:
-                                header_str += section_number_str
-                            parsing_header = True
-
-                        else:
-                            section_number = None
-                            parsing_header = False
-                            if parsing_valid_section:
-                                pass # TODO: Implement putting this header back into the previous section lines
+                                index_char += len(section_number_str)
 
                     # Header sequence description
                     if current_header_sequence_string == self.section_header.key_description:
@@ -195,236 +178,104 @@ class MasterFile(MonitoredFile):
                             else:
                                 section_description = line[index_char : next_test_string_index].strip()
                                 header_parse_success = True
+                                index_char += len(section_description)
 
-                        if header_parse_success:
-                            # Either already true or the case
-                            # of first sequence index being section number
-                            if not parsing_header:
-                                parsing_header = True
-                                header_str = section_description
-                            else:
-                                header_str += section_description
+                    # Increment header sequence index
+                    # or reset if header parsing failure
+                    if header_parse_success:
+                        head_sq_index += 1
+                        if pulse_last_head_sq_index:
 
-                        else:
-                            section_number = None
-                            parsing_header = False
                             if parsing_valid_section:
-                                new_section_file.lines += header_str
-
-                    if not header_parse_success:
-                        parsing_header = False
-
-                        # If a new header is detected while parsing a valid section,
-                        # create a new section file and append to the return list
-                        if parsing_valid_section:
-
-                            # print(f"Attempting to create section file\n\t\tnumber:      {section_number}\n\t\tdescription: {section_description}")
-
-                            try:
-                                new_section_file = SectionFile(
-                                    path= self.dir_master_sections.joinpath(
-                                        str(section_number) + "__" + section_description + "." + self.filetype
-                                    ),
-                                    section_number= section_number,
-                                    section_description= section_description,
-                                    master_file= self
-                                )
-                            except:
-                                # print("Failed to generate section file")
-                                pass
-                            else:
-                                # print("Section file success")
-                                new_section_file.lines = section_lines
                                 self.sections.append(new_section_file)
 
-                        parsing_header = True
-                        head_sq_index = 1
-                        section_number = 0
-                        section_description = ""
+                            head_sq_index = 0
+                            header_lines = []
 
-                        index_char += len(header_start_str)
+                            new_section_file = SectionFile(
+                                path= self.dir_master_sections.joinpath(
+                                    section_number_str + "__" + section_description + "." + self.filetype
+                                ),
+                                section_number= section_number,
+                                section_description= section_description,
+                                master_file= self
+                            )
+                            parsing_valid_section = True
+                            section_lines = []
 
-                    elif parsing_header:
-
-                        seq_str = standard_header_sequence[head_sq_index]
-                        # print(fr"Parsing substring: {line[index_char:]} of length {len(line[index_char:])} for seq_str: {seq_str} of length {len(seq_str)}")
-
-                        # We can only be parsing one at a time
-                        parsing_valid_section = False
-
-
-
-                        # Parse section number
-                        if seq_str == header_key_words[HeaderElement.SECTION_NUMBER]:
-
-                            # print("Section Number")
-                            head_sq_index += 1
-
-                            # If this is the last attribute in the header,
-                            # assume the remainder of the line is the section
-                            # number and take it!
-                            if last_parsing_index:
-                                try:
-                                    section_number_str = line[index_char:].strip()
-                                    section_number = int(section_number_str)
-
-                                    # If replacing the section number,
-                                    # Set section_number for the section file class
-                                    # and replace the text in this line
-                                    if renumber_sections and section_number:
-
-                                        line = line.replace(section_number_str, str(global_section_number))
-
-                                        section_number_str = str(global_section_number)
-                                        section_number = global_section_number
-                                        global_section_number += 1
-
-                                except:
-                                    pass
-                                finally:
-
-                                    # End parsing on this line whether a number was found or not.
-                                    index_char = len(line)
-
-                            # Otherwise, split by the next substring and take the int
-                            else:
-                                try:
-                                    section_number_str = line[index_char:].split(standard_header_sequence[head_sq_index + 1])[0].strip()
-                                    section_number = int(section_number_str)
-
-                                    # If replacing the section number,
-                                    # Set section_number for the section file class
-                                    # and replace the text in this line
-                                    if renumber_sections and section_number:
-
-                                        line = line.replace(section_number_str, str(global_section_number))
-
-                                        section_number_str = str(global_section_number)
-                                        section_number = global_section_number
-                                        global_section_number += 1
-
-                                except:
-
-                                    # End line parsing if the number couldn't be parsed
-                                    index_char = len(line)
-                                else:
-
-                                    # If parsing was successful, increment the character index
-                                    index_char += len(section_number_str)
-
-                        # Parse section description
-                        elif seq_str == header_key_words[HeaderElement.SECTION_DESCRIPTION]:
-
-                            # print("Section Description")
-                            head_sq_index += 1
-
-                            # If this is the last attribute in the header,
-                            # assume the remainder of the line is the section
-                            # description and take it!
-                            if last_parsing_index:
-                                try:
-                                    section_description = line[index_char:].strip()
-                                except:
-                                    pass
-                                finally:
-
-                                    # End parsing on this line whether a description was found or not.
-                                    index_char = len(line)
-
-                            # Otherwise, split by the next substring and take the int
-                            else:
-                                try:
-                                    section_description = line[index_char:].split(standard_header_sequence[head_sq_index + 1])[0].strip()
-                                except:
-
-                                    # End line parsing if the description couldn't be parsed
-                                    index_char = len(line)
-                                else:
-
-                                    # If parsing was successful, increment the character index
-                                    index_char += len(section_description)
-
-                        # Complete header parsing and evaluate if header valid
-                        elif line.strip()  == header_key_words[HeaderElement.HEADER_END]:
-
-                            # print("Header End")
-
-                            if parsing_header and section_number > 0 and section_description != "":
-                                parsing_valid_section = True
-
-                            index_char += len(line)
-
-                            parsing_header = False
-                            section_lines = ""
-                            add_lines = ""
-
-                        # Move along if this is boilerplate header text
-                        elif seq_str == line[index_char:index_char + len(seq_str)]:
-
-                            # print(fr"Sequence String Match: {seq_str}")
-
-                            index_char += len(seq_str)
-                            head_sq_index += 1
-
-                        # If this section of header isn't in the header sequence,
-                        # then it's an improperly formatted header.
-                        else:
-                            # print(fr"Bad Header, seq_str: {seq_str}, substring: {line[index_char:]}")
-
-                            parsing_header = False
-
-                    elif parsing_valid_section:
-
-                        # print("Parsing valid section")
-                        index_char = len(line)
-
-                        # Skip leading empty lines
-                        if section_lines or line.strip():
-                            # print("Adding to add_lines")
-                            add_lines += line
-
-                            # Skip empty lines at the end
-                            if line.strip():
-                                # print("Pushing add_lines to section_lines")
-                                section_lines += add_lines
-                                add_lines = ""
-
-                    # If not parsing a header or valid section, just continue
                     else:
-                        # print("This line is meaningless")
-
+                        head_sq_index = 0
                         index_char = len(line)
 
-                if renumber_sections:
-                    master_file_lines.append(line)
+                if not parsing_header:
+                    header_lines = []
 
-            # If the line loop ends while parsing a valid section,
-            # create a new section file and append to the return list
-            if parsing_valid_section:
+                if header_parse_success:
+                    parsing_header = True
+                    header_lines.append(line)
 
-                # print(f"Attempting to create section file\n\t\tnumber:      {section_number}\n\t\tdescription: {section_description}")
+                elif parsing_header:
+                    if parsing_valid_section and header_lines:
+                        section_lines.extend(header_lines)
+                    parsing_header = False
+                    header_lines = []
 
-                try:
-                    new_section_file = SectionFile(
-                        path= master_file.dir_master_sections.joinpath(
-                            str(section_number) + "__" + section_description + "." + master_file.filetype
-                        ),
-                        section_number= section_number,
-                        section_description= section_description,
-                        master_file= master_file
-                    )
-                except:
-                    # print("Failed to generate section file")
-                    pass
-                else:
-                    # print("Section file success")
-                    new_section_file.lines = section_lines
-                    self.sections.append(new_section_file)
+                elif parsing_valid_section:
+                    section_lines.append(line)
+                
+                if parsing_valid_section and line:
+                    new_section_file.lines.extend(section_lines)
+                    section_lines = []
 
-        if renumber_sections:
-            with open(master_file.path, "w") as f:
-                f.writelines(master_file_lines)
+        if parsing_valid_section:
+            self.sections.append(new_section_file)
 
-        return self.sections
+if __name__ == "__main__":
 
+    section_header = SectionHeader(
+        key_sequence= [
+            "spank ",
+            "numnumnum",
+            "\n",
+            " dobonk: ",
+            "descdescdesc",
+            "] browntown"
+        ],
+        key_number= "numnumnum",
+        key_description= "descdescdesc"
+    )
 
+    temporary_file_path = pathlib.Path("test.txt").resolve()
+
+    with open(temporary_file_path, "w") as f:
+
+        f.write(section_header.generate_header(number= 1, description= "section one"))
+
+        f.write("\n")
+
+        f.write("code code\ncode section 1\n")
+
+        f.write(section_header.generate_header(number= 2, description= "section two"))
+
+        f.write("\n")
+
+        f.write("code section 2\n\n\n\n\nend of section2")
+
+    mfile = MasterFile(
+        path= temporary_file_path,
+        dir_master_sections= pathlib.Path("temp_sections").resolve()
+    )
+    mfile.section_header = section_header
+
+    if not mfile.dir_master_sections.is_dir():
+        os.mkdir(mfile.dir_master_sections)
+
+    mfile.parse()
+
+    for section in mfile.sections:
+        print(f"Section {section.section_number}, {section.section_description}")
+        for line in section.lines:
+            print(f"\t{line}", end='')
+
+        with open(section.path, "w") as f:
+            f.writelines(section.lines)
