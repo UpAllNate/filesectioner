@@ -212,7 +212,7 @@ class MasterFile(MonitoredFile):
 
                 if header_parse_success:
                     parsing_header = True
-                    header_lines.append(line)
+                    header_lines.append(line.strip())
 
                 elif parsing_header:
                     if parsing_valid_section and header_lines:
@@ -221,7 +221,7 @@ class MasterFile(MonitoredFile):
                     header_lines = []
 
                 elif parsing_valid_section:
-                    section_lines.append(line)
+                    section_lines.append(line.strip())
                 
                 if parsing_valid_section and line:
                     new_section_file.lines.extend(section_lines)
@@ -261,6 +261,9 @@ if __name__ == "__main__":
 
         f.write("code section 2\n\n\n\n\nend of section2")
 
+        f.write("\n")
+        f.write("spank ")
+
     mfile = MasterFile(
         path= temporary_file_path,
         dir_master_sections= pathlib.Path("temp_sections").resolve()
@@ -275,7 +278,11 @@ if __name__ == "__main__":
     for section in mfile.sections:
         print(f"Section {section.section_number}, {section.section_description}")
         for line in section.lines:
-            print(f"\t{line}", end='')
+            print(f"\t{line}")
 
         with open(section.path, "w") as f:
-            f.writelines(section.lines)
+            for line_number, line in enumerate(section.lines):
+                if line_number < len(section.lines) - 1:
+                    f.write(line + "\n")
+                else:
+                    f.write(line)
