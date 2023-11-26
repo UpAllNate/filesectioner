@@ -222,7 +222,7 @@ class MasterFile(MonitoredFile):
 
                 elif parsing_valid_section:
                     section_lines.append(line.strip())
-                
+
                 if parsing_valid_section and line:
                     new_section_file.lines.extend(section_lines)
                     section_lines = []
@@ -231,7 +231,7 @@ class MasterFile(MonitoredFile):
 
             # If the whole file is completed and was
             # parsing a section, add those header
-            # lines to that section
+            # lines to that last section
             if header_lines:
                 section_lines.extend(header_lines)
                 new_section_file.lines.extend(header_lines)
