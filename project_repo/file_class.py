@@ -124,17 +124,21 @@ class MasterFile(MonitoredFile):
                     header_sequence_match = test_string == current_header_sequence_string
 
                     pulse_last_head_sq_index = last_head_sq_index == head_sq_index
+                    header_parse_success = False
 
+                    # Header text match
                     if header_sequence_match:
                         index_char += len(self.section_header.key_sequence[head_sq_index])
                         if head_sq_index == 0:
                             header_str = test_string
                             parsing_header = True
+                        
+                        header_parse_success = True
 
+                    # Header sequence number
                     if current_header_sequence_string == self.section_header.key_number:
 
                         parse_key = False
-                        parse_success = False
 
                         # Get the section number as string
                         if pulse_last_head_sq_index:
@@ -157,9 +161,9 @@ class MasterFile(MonitoredFile):
                             except:
                                 pass
                             else:
-                                parse_success = True
+                                header_parse_success = True
                                 
-                        if parse_success:
+                        if header_parse_success:
                             # Either already true or the case
                             # of first sequence index being section number
                             if not parsing_header:
@@ -174,14 +178,13 @@ class MasterFile(MonitoredFile):
                             if parsing_valid_section:
                                 pass # TODO: Implement putting this header back into the previous section lines
 
+                    # Header sequence description
                     if current_header_sequence_string == self.section_header.key_description:
-
-                        parse_success = True
 
                         # Get the section number as string
                         if pulse_last_head_sq_index:
                             section_description = line[index_char:].strip()
-                            parse_success = True
+                            header_parse_success = True
 
                         else:
                             next_test_string = self.section_header.key_sequence[head_sq_index + 1]
@@ -191,9 +194,9 @@ class MasterFile(MonitoredFile):
                                 pass
                             else:
                                 section_description = line[index_char : next_test_string_index].strip()
-                                parse_success = True
+                                header_parse_success = True
 
-                        if parse_success:
+                        if header_parse_success:
                             # Either already true or the case
                             # of first sequence index being section number
                             if not parsing_header:
@@ -208,14 +211,8 @@ class MasterFile(MonitoredFile):
                             if parsing_valid_section:
                                 new_section_file.lines += header_str
 
-
-
-                    else:
+                    if not header_parse_success:
                         parsing_header = False
-
-
-
-
 
                         # If a new header is detected while parsing a valid section,
                         # create a new section file and append to the return list
