@@ -109,26 +109,6 @@ def make_empty_dir(dir):
 
     os.mkdir(dir)
 
-
-# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-# section number     : 7
-# section description: detect_files
-# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-def detect_all_master_files(dir : Path, section_header : SectionHeader) -> list[MasterFile]:
-
-    return_files : list[MasterFile] = []
-
-    for path in os.listdir(dir):
-        new_master_file = MasterFile(path= path)
-        if new_master_file.lines_readable:
-            new_master_file.section_header = section_header
-            new_master_file.parse()
-            if new_master_file.sections:
-                return_files.append(new_master_file)
-
-    return return_files
-
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 # section number     : 9
 # section description: generate_section_files
@@ -136,6 +116,8 @@ def detect_all_master_files(dir : Path, section_header : SectionHeader) -> list[
 
 def generate_section_files(master_file : MasterFile) -> None:
 
+    make_empty_dir(master_file.dir_master_sections)
+    
     for section in master_file.sections:
 
         with open(section.path, "w") as f:
