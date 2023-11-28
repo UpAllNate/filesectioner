@@ -97,22 +97,12 @@ def get_master_files(directories : list[str], headers : list[SectionHeader]) -> 
     
     return master_files
 
-# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-# section number     : 2
-# section description: make_empty_dir
-# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
 def make_empty_dir(dir):
     # Check whether the specified path exists or not
     if os.path.exists(dir):
         shutil.rmtree(dir)
 
     os.mkdir(dir)
-
-# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-# section number     : 9
-# section description: generate_section_files
-# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 def generate_section_files(master_file : MasterFile) -> None:
 
@@ -129,28 +119,20 @@ def generate_section_files(master_file : MasterFile) -> None:
                         f.write(line)
             else:
                 f.write("")
-            
+        
+        section.prev_mod_time = section.get_mod_time()
 
-# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-# section number     : 10
-# section description: build_sections
-# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+def get_parent_dirs(master_files : list[MasterFile]) -> list[Path]:
 
-def build_sections(master_file : MasterFile) -> MasterFile:
+    return list(set(m.path.parent.resolve() for m in master_files))
+
+def build_sections(master_file : MasterFile) -> None:
 
     print("build")
 
     master_file.parse()
-    make_empty_dir(dir_sections.joinpath(master_file.dir_master_sections))
+    make_empty_dir(master_file.dir_master_sections)
     generate_section_files(master_file= master_file)
-
-    return master_file
-
-
-# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-# section number     : 11
-# section description: detect_all_section_files
-# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 def detect_all_section_files(master_file : MasterFile) -> list[SectionFile]:
 
@@ -174,24 +156,20 @@ def detect_all_section_files(master_file : MasterFile) -> list[SectionFile]:
 
     return return_files
 
-
-# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-# section number     : 12
-# section description: main
-# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
 if __name__ == "__main__":
 
     import time
 
-    make_empty_dir(dir= dir_sections)
+    mfiles = get_master_files(directories = args.dirs, headers = all_section_headers)
+    parent_paths = get_parent_dirs(master_files= mfiles)
 
-    mfiles : list[MasterFile] = []
-
-# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-# section number     : 13
-# section description: mainLoop
-# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    for path in parent_paths:
+        make_empty_dir(dir= path.joinpath("sections"))
+    
+    for m in mfiles:
+        build_sections(master_file= m)
+    
+    exit()
 
     try:
         while True:
