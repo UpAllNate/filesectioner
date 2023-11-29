@@ -4,7 +4,7 @@ import pathlib
 import os
 
 from header import SectionHeader
-# from icecream import ic
+from icecream import ic
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~+
 # section_number     : 6
@@ -104,7 +104,7 @@ class MasterFile(MonitoredFile):
                 for line in f:
                     line : str
 
-                    # ic(len(line), line.strip())
+                    ic(len(line), line.strip())
 
                     # The line is parsed by investigating whether
                     # the sequence string matches the current
@@ -127,38 +127,38 @@ class MasterFile(MonitoredFile):
                         ]
 
                         header_sequence_match = test_string == current_header_sequence_string
-                        # ic(
-                        #     current_header_sequence_string,
-                        #     len(current_header_sequence_string),
-                        #     test_string,
-                        #     index_char,
-                        #     head_sq_index
-                        # )
+                        ic(
+                            current_header_sequence_string,
+                            len(current_header_sequence_string),
+                            test_string,
+                            index_char,
+                            head_sq_index
+                        )
 
                         pulse_last_head_sq_index = last_head_sq_index == head_sq_index
                         header_parse_success = False
 
                         # Header text match
                         if header_sequence_match:
-                            # ic("sequence match")
+                            ic("sequence match")
                             index_char += len(self.section_header.key_sequence[head_sq_index])
                             header_parse_success = True
 
                         # Header sequence number
                         if current_header_sequence_string == self.section_header.key_number:
-                            # ic("key_number")
+                            ic("key_number")
 
                             parse_key = False
 
                             # Get the section number as string
                             if pulse_last_head_sq_index:
-                                # ic("last head sq key in number")
+                                ic("last head sq key in number")
                                 section_number_str = line[index_char:].strip()
                                 parse_key = True
 
                             else:
                                 next_test_string = self.section_header.key_sequence[head_sq_index + 1]
-                                # ic(next_test_string, line[index_char:])
+                                ic(next_test_string, line[index_char:])
                                 try:
                                     next_test_string_index = line[index_char:].index(next_test_string)
                                 except:
@@ -178,7 +178,7 @@ class MasterFile(MonitoredFile):
 
                         # Header sequence description
                         if current_header_sequence_string == self.section_header.key_description:
-                            # ic("key_description")
+                            ic("key_description")
 
                             # Get the section number as string
                             if pulse_last_head_sq_index:
@@ -196,7 +196,7 @@ class MasterFile(MonitoredFile):
                                     header_parse_success = True
                                     index_char += len(section_description)
 
-                        # ic(header_parse_success)
+                        ic(header_parse_success)
                         # Increment header sequence index
                         # or reset if header parsing failure
                         if header_parse_success:
@@ -225,31 +225,40 @@ class MasterFile(MonitoredFile):
                             index_char = len(line)
 
                     if not parsing_header:
+                        ic("cleared header lines because not parsing header")
                         header_lines = []
 
-                    if header_parse_success:
+                    if header_parse_success and not pulse_last_head_sq_index:
+                        ic("parse success", parsing_header)
                         parsing_header = True
                         header_lines.append(line.strip())
+                        ic(header_lines)
 
                     elif parsing_header:
+                        ic(parsing_header)
                         if parsing_valid_section and header_lines:
+                            ic("extending section lines with header lines", header_lines)
+
                             section_lines.extend(header_lines)
                         parsing_header = False
                         header_lines = []
 
-                    elif parsing_valid_section:
+                    elif parsing_valid_section and (new_section_file.lines or line.strip()):
+                        ic("adding line", parsing_valid_section, new_section_file.lines, line.strip())
                         section_lines.append(line.strip())
 
                     if parsing_valid_section and line:
+                        ic("extending section lines", section_lines)
                         new_section_file.lines.extend(section_lines)
                         section_lines = []
 
             if parsing_valid_section:
-
+                ic("parsing valid section after file")
                 # If the whole file is completed and was
                 # parsing a section, add those header
                 # lines to that last section
                 if header_lines:
+                    ic("extending section lines with header lines", header_lines)
                     section_lines.extend(header_lines)
                     new_section_file.lines.extend(header_lines)
 
