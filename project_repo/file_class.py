@@ -244,13 +244,16 @@ class MasterFile(MonitoredFile):
                         header_lines = []
 
                     elif parsing_valid_section and (new_section_file.lines or line.strip()):
-                        ic("adding line", parsing_valid_section, new_section_file.lines, line.strip())
+                        ic("adding line to section lines", parsing_valid_section, line.strip())
                         section_lines.append(line.strip())
+                        ic(section_lines)
 
-                    if parsing_valid_section and line:
+                    if parsing_valid_section and line.strip() and not header_parse_success:
                         ic("extending section lines", section_lines)
                         new_section_file.lines.extend(section_lines)
+                        ic(new_section_file.lines)
                         section_lines = []
+                        ic("cleared section lines", section_lines)
 
             if parsing_valid_section:
                 ic("parsing valid section after file")
