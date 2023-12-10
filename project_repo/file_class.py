@@ -80,194 +80,172 @@ class MasterFile(MonitoredFile):
         self.sections : list[SectionFile] = []
         self.section_header : SectionHeader = None
 
-    def parse(self) -> None:
+class HeaderSpecifier:
 
-        # The header sequence specifies the position
-        # in standard_header_sequence that is being
-        # parsed for
+    def __init__(
+            self,
+            header_start_line,
+            header_end_line,
+            section_number,
+            section_description
+        ) -> None:
 
-        last_head_sq_index = len(self.section_header.key_sequence) - 1
+        self.header_start_line = header_start_line
+        self.header_end_line = header_end_line
+        self.code_start_line = None
+        self.code_end_line = None
+        self.section_number = section_number
+        self.section_description = section_description
 
-        head_sq_index = 0
-        parsing_header = False
-        parsing_valid_section = False
-        self.sections : list[SectionFile] = []
-        header_lines : list[str] = []
-        section_lines : list[str] = [] # Used to only extend section lines with non empty lines
+def parse_master_file_headers(master_file : MasterFile) -> list[HeaderSpecifier]:
 
-        section_number = None
-        section_description = None
+    # The header sequence specifies the position
+    # in standard_header_sequence that is being
+    # parsed for
 
-        try:
-            with open(self.path, "r") as f:
+    last_head_sq_index = len(master_file.section_header.key_sequence) - 1
 
-                for line in f:
-                    line : str
+    head_sq_index = 0
+    parsing_header = False
+    header_lines : list[str] = []
+    return_header_specifiers : list[HeaderSpecifier] = []
+    new_header_specifier = None
 
-                    ic(len(line), line.strip())
+    section_number = None
+    section_description = None
 
-                    # The line is parsed by investigating whether
-                    # the sequence string matches the current
-                    # character index
-                    # The character index is then incremented by
-                    # the length of the sequence string found
+    # ic("Parsing master file", master_file.filename)
 
-                    index_char = 0
+    try:
+        with open(master_file.path, "r") as f:
 
-                    # Parse the entire line, which could contain
-                    # severall header sequence elements
+            for line_num, line in enumerate(f):
+                line : str
 
-                    while index_char < len(line):
+                # ic("evaluating line\n", line)
 
-                        current_header_sequence_string = self.section_header.key_sequence[head_sq_index]
+                index_char = 0
 
-                        test_string = line[
-                            index_char :
-                            index_char + len(current_header_sequence_string)
-                        ]
+                # Parse the entire line, which could contain
+                # several header sequence elements
+                while index_char < len(line):
+                    # ic(head_sq_index)
+                    current_header_sequence_string = master_file.section_header.key_sequence[head_sq_index]
+                    test_string = line[index_char : index_char + len(current_header_sequence_string)]
+                    header_sequence_match = test_string == current_header_sequence_string
+                    pulse_last_head_sq_index = last_head_sq_index == head_sq_index
+                    header_parse_success = False
 
-                        header_sequence_match = test_string == current_header_sequence_string
-                        ic(
-                            current_header_sequence_string,
-                            len(current_header_sequence_string),
-                            test_string,
-                            index_char,
-                            head_sq_index
-                        )
+                    # ic(current_header_sequence_string, test_string, header_sequence_match, pulse_last_head_sq_index)
 
-                        pulse_last_head_sq_index = last_head_sq_index == head_sq_index
-                        header_parse_success = False
+                    # Header text match
+                    if header_sequence_match:
+                        index_char += len(master_file.section_header.key_sequence[head_sq_index])
+                        header_parse_success = True
 
-                        # Header text match
-                        if header_sequence_match:
-                            ic("sequence match")
-                            index_char += len(self.section_header.key_sequence[head_sq_index])
-                            header_parse_success = True
+                    # Header sequence number
+                    if current_header_sequence_string == master_file.section_header.key_number:
 
-                        # Header sequence number
-                        if current_header_sequence_string == self.section_header.key_number:
-                            ic("key_number")
+                        parse_key = False
 
-                            parse_key = False
-
-                            # Get the section number as string
-                            if pulse_last_head_sq_index:
-                                ic("last head sq key in number")
-                                section_number_str = line[index_char:].strip()
-                                parse_key = True
-
-                            else:
-                                next_test_string = self.section_header.key_sequence[head_sq_index + 1]
-                                ic(next_test_string, line[index_char:])
-                                try:
-                                    next_test_string_index = line[index_char:].index(next_test_string)
-                                except:
-                                    pass
-                                else:
-                                    section_number_str = line[index_char:][:next_test_string_index].strip()
-                                    parse_key = True
-
-                            if parse_key:
-                                try:
-                                    section_number = int(section_number_str)
-                                except:
-                                    pass
-                                else:
-                                    header_parse_success = True
-                                    index_char += len(section_number_str)
-
-                        # Header sequence description
-                        if current_header_sequence_string == self.section_header.key_description:
-                            ic("key_description")
-
-                            # Get the section number as string
-                            if pulse_last_head_sq_index:
-                                section_description = line[index_char:].strip()
-                                header_parse_success = True
-
-                            else:
-                                next_test_string = self.section_header.key_sequence[head_sq_index + 1]
-                                try:
-                                    next_test_string_index = line[index_char:].index(next_test_string)
-                                except:
-                                    pass
-                                else:
-                                    section_description = line[index_char:][:next_test_string_index].strip()
-                                    header_parse_success = True
-                                    index_char += len(section_description)
-
-                        ic(header_parse_success)
-                        # Increment header sequence index
-                        # or reset if header parsing failure
-                        if header_parse_success:
-                            head_sq_index += 1
-                            if pulse_last_head_sq_index:
-
-                                if parsing_valid_section:
-                                    self.sections.append(new_section_file)
-
-                                head_sq_index = 0
-                                header_lines = []
-
-                                new_section_file = SectionFile(
-                                    path= self.dir_master_sections.joinpath(
-                                        section_number_str + "__" + section_description + "." + self.filetype
-                                    ),
-                                    section_number= section_number,
-                                    section_description= section_description,
-                                    master_file= self
-                                )
-                                parsing_valid_section = True
-                                section_lines = []
+                        # Get the section number as string
+                        if pulse_last_head_sq_index:
+                            section_number_str = line[index_char:].strip()
+                            parse_key = True
 
                         else:
+                            next_test_string = master_file.section_header.key_sequence[head_sq_index + 1]
+                            try:
+                                next_test_string_index = line[index_char:].index(next_test_string)
+                            except:
+                                pass
+                            else:
+                                section_number_str = line[index_char:][:next_test_string_index].strip()
+                                parse_key = True
+
+                        if parse_key:
+                            try:
+                                section_number = int(section_number_str)
+                            except:
+                                pass
+                            else:
+                                header_parse_success = True
+                                index_char += len(section_number_str)
+
+                    # Header sequence description
+                    if current_header_sequence_string == master_file.section_header.key_description:
+
+                        # Get the section number as string
+                        if pulse_last_head_sq_index:
+                            section_description = line[index_char:].strip()
+                            header_parse_success = True
+
+                        else:
+                            next_test_string = master_file.section_header.key_sequence[head_sq_index + 1]
+                            try:
+                                next_test_string_index = line[index_char:].index(next_test_string)
+                            except:
+                                pass
+                            else:
+                                section_description = line[index_char:][:next_test_string_index].strip()
+                                header_parse_success = True
+                                index_char += len(section_description)
+
+                    # Increment header sequence index
+                    # or reset if header parsing failure
+                    if header_parse_success:
+                        head_sq_index += 1
+                        if pulse_last_head_sq_index:
+
                             head_sq_index = 0
                             index_char = len(line)
 
-                    if not parsing_header:
-                        ic("cleared header lines because not parsing header")
-                        header_lines = []
+                            header_lines.append(line)
 
-                    if header_parse_success and not pulse_last_head_sq_index:
-                        ic("parse success", parsing_header)
-                        parsing_header = True
-                        header_lines.append(line.strip())
-                        ic(header_lines)
+                            # ic("header complete", line_num, header_lines)
+                            new_header_specifier = HeaderSpecifier(
+                                header_start_line= line_num - len(header_lines) + 1,
+                                header_end_line= line_num,
+                                section_description= section_description,
+                                section_number= section_number
+                            )
 
-                    elif parsing_header:
-                        ic(parsing_header)
-                        if parsing_valid_section and header_lines:
-                            ic("extending section lines with header lines", header_lines)
+                    else:
+                        # ic("just a regular line", line)
+                        head_sq_index = 0
+                        index_char = len(line)
 
-                            section_lines.extend(header_lines)
-                        parsing_header = False
-                        header_lines = []
+                        if new_header_specifier is not None:
+                            # ic("parsing when code starts and ends...")
 
-                    elif parsing_valid_section and (new_section_file.lines or line.strip()):
-                        ic("adding line to section lines", parsing_valid_section, line.strip())
-                        section_lines.append(line.strip())
-                        ic(section_lines)
+                            if line.strip() and new_header_specifier.code_start_line is None:
+                                new_header_specifier.code_start_line = line_num
+                                # ic(new_header_specifier.code_start_line)
 
-                    if parsing_valid_section and line.strip() and not header_parse_success:
-                        ic("extending section lines", section_lines)
-                        new_section_file.lines.extend(section_lines)
-                        ic(new_section_file.lines)
-                        section_lines = []
-                        ic("cleared section lines", section_lines)
+                            if line.strip():
+                                new_header_specifier.code_end_line = line_num
+                                # ic(new_header_specifier.code_end_line)
 
-            if parsing_valid_section:
-                ic("parsing valid section after file")
-                # If the whole file is completed and was
-                # parsing a section, add those header
-                # lines to that last section
-                if header_lines:
-                    ic("extending section lines with header lines", header_lines)
-                    section_lines.extend(header_lines)
-                    new_section_file.lines.extend(header_lines)
+                if not parsing_header:
+                    header_lines = []
 
-                self.sections.append(new_section_file)
-        except PermissionError:
-            pass
+                if header_parse_success and not pulse_last_head_sq_index:
+                    parsing_header = True
+                    header_lines.append(line.strip())
+                    # ic("Header parse success",header_lines)
+
+                elif parsing_header:
+
+                    parsing_header = False
+                    header_lines = []
+
+            if new_header_specifier is not None:
+                return_header_specifiers.append(new_header_specifier)
+
+    except PermissionError:
+        pass
+
+    return return_header_specifiers
 
 if __name__ == "__main__":
 

@@ -5,7 +5,9 @@ import shutil
 from pathlib import Path
 
 from header import SectionHeader
-from file_class import MasterFile, SectionFile
+from file_class import MasterFile, SectionFile, parse_master_file_headers
+
+from icecream import ic
 
 import argparse
 
@@ -55,6 +57,7 @@ all_section_headers = [
 
 def get_master_files(directories : list[str], headers : list[SectionHeader]) -> list[MasterFile]:
 
+    ic(headers)
     input_dirs = directories
 
     # Evaluate directories and convert to Path class objects
@@ -65,36 +68,44 @@ def get_master_files(directories : list[str], headers : list[SectionHeader]) -> 
             pops.append(i)
             for d in os.listdir(dir_working):
                 if Path(dir).joinpath(d).is_file():
-                    input_dirs.append(Path(dir).joinpath(d).resolve()) 
+                    input_dirs.append(Path(dir).joinpath(d).resolve())
 
         elif Path(dir).is_dir():
             pops.append(i)
             for d in os.listdir(dir):
                 if Path(dir).joinpath(d).is_file():
-                    input_dirs.append(Path(dir).joinpath(d).resolve())    
-        
+                    input_dirs.append(Path(dir).joinpath(d).resolve())
+
         elif Path(dir).is_file():
             input_dirs[i] = Path(dir).resolve()
-        
+
         else:
             pops.append(i)
 
     for i in sorted(pops, reverse=True):
         input_dirs.pop(i)
 
+    ic(input_dirs)
+
     master_files : list[MasterFile] = []
+
     for file in input_dirs:
+        ic("processing file", file)
         new_master_file = MasterFile(file)
         added = False
         if new_master_file.lines_readable:
+
+            ic("readable ok ok ok", headers)
             for header in headers:
                 if not added:
                     new_master_file.section_header = header
-                    new_master_file.parse()
+                    new_headers = parse_master_file_headers(new_master_file)
+                    for header in new_headers:
+                        print(header.__dict__)
                     if new_master_file.sections:
                         added = True
                         master_files.append(new_master_file)
-    
+
     return master_files
 
 def make_empty_dir(dir):
@@ -107,7 +118,7 @@ def make_empty_dir(dir):
 def generate_section_files(master_file : MasterFile) -> None:
 
     make_empty_dir(master_file.dir_master_sections)
-    
+
     for section in master_file.sections:
 
         with open(section.path, "w") as f:
@@ -119,7 +130,7 @@ def generate_section_files(master_file : MasterFile) -> None:
                         f.write(line)
             else:
                 f.write("")
-        
+
         section.prev_mod_time = section.get_mod_time()
 
 def get_parent_dirs(master_files : list[MasterFile]) -> list[Path]:
@@ -165,10 +176,10 @@ if __name__ == "__main__":
 
     for path in parent_paths:
         make_empty_dir(dir= path.joinpath("sections"))
-    
+
     for m in mfiles:
         build_sections(master_file= m)
-    
+
     exit()
 
     try:
